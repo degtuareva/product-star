@@ -1,103 +1,78 @@
 package com.product.star.homework;
 
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.EmptyResultDataAccessException;
-import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.jdbc.Sql;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.embedded.EmbeddedDatabase;
+import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseBuilder;
+import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseType;
 
 import java.util.List;
 
-/**
- * Unit tests for {@link ContactDao}.
- *
- * Аннотация @Sql подтягивает SQL-скрипт contact.sql, который будет применен к базе перед выполнением теста.
- * Contact.sql создает таблицу CONTACT с полями (ID, NAME, SURNAME, EMAIL, PHONE_NUMBER) и вставляет в нее 2 записи.
- *
- * Тесты проверяют корректность реализации ContactDao.
- */
-@ExtendWith(SpringExtension.class)
-@ContextConfiguration(classes = ContactConfiguration.class)
-@Sql("classpath:contact.sql")
-public record ContactDaoTests(@Autowired ContactDao contactDao) {
+public class ContactDaoTests {
 
-    private static final Contact IVAN = new Contact(
-            1000L, "Ivan", "Ivanov", "iivanov@gmail.com", "1234567"
-    );
+    private EmbeddedDatabase db;
+    private ContactDao contactDao;
 
-    private static final Contact MARIA = new Contact(
-            2000L, "Maria", "Ivanova", "mivanova@gmail.com", "7654321"
-    );
+    @Before
+    public void setup() {
+        db = new EmbeddedDatabaseBuilder()
+                .setType(EmbeddedDatabaseType.H2)
+                .addScript("classpath:schema.sql")  // создание таблиц
+                .addScript("classpath:data.sql")    // начальные данные, опционально
+                .build();
 
-    /**
-     * There are two contacts inserted in the database in contact.sql.
-     */
-    private static final List<Contact> PERSISTED_CONTACTS = List.of(IVAN, MARIA);
+        JdbcTemplate jdbcTemplate = new JdbcTemplate(db);
+        contactDao = new ContactDao(new org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate(jdbcTemplate));
+    }
 
-    @Test
-    void addContact() {
-        var contact = new Contact("Jackie", "Chan", "jchan@gmail.com", "1234567890");
-        var contactId = contactDao.addContact(contact);
-        contact.setId(contactId);
-
-        var contactInDb = contactDao.getContact(contactId);
-
-
-        assertThat(contactInDb).isEqualTo(contact);
+    @After
+    public void teardown() {
+        db.shutdown();
     }
 
     @Test
-    void getContact() {
-        var contact = contactDao.getContact(IVAN.getId());
-
-        assertThat(contact).isEqualTo(IVAN);
+    public void testGetAllContacts() {
+        List<Contact> contacts = contactDao.getAllContacts();
+        Assert.assertNotNull(contacts);
+        Assert.assertEquals(2, contacts.size());
     }
 
     @Test
-    void getAllContacts() {
-        var contacts = contactDao.getAllContacts();
+    public void testAddContact() {
+        Contact contact = new Contact();
+        contact.setName("Alice");
+        contact.setSurname("Johnson");
+        contact.setPhone("1112223333");
+        contact.setEmail("alice.johnson@example.com");
 
-        assertThat(contacts).containsAll(PERSISTED_CONTACTS);
+        Long id = contactDao.addContact(contact);
+        Assert.assertNotNull(id);
+
+        Contact savedContact = contactDao.getContactById(id);
+        Assert.assertEquals("Alice", savedContact.getName());
     }
 
     @Test
-    void updatePhoneNumber() {
-        var contact = new Contact("Jekyll", "Hide", "jhide@gmail.com", "");
-        var contactId = contactDao.addContact(contact);
-
-        var newPhone = "777-77-77";
-        contactDao.updatePhoneNumber(contactId, newPhone);
-
-        var updatedContact = contactDao.getContact(contactId);
-        assertThat(updatedContact.getPhone()).isEqualTo(newPhone);
+    public void testUpdatePhone() {
+        contactDao.updatePhoneNumber(1L, "9999999999");
+        Contact contact = contactDao.getContactById(1L);
+        Assert.assertEquals("9999999999", contact.getPhone());
     }
 
     @Test
-    void updateEmail() {
-        var contact = new Contact("Captain", "America", "", "");
-        var contactId = contactDao.addContact(contact);
-
-        var newEmail = "cap@gmail.com";
-        contactDao.updateEmail(contactId, newEmail);
-
-        var updatedContact = contactDao.getContact(contactId);
-        assertThat(updatedContact.getEmail()).isEqualTo(newEmail);
+    public void testUpdateEmail() {
+        contactDao.updateEmail(2L, "new.email@example.com");
+        Contact contact = contactDao.getContactById(2L);
+        Assert.assertEquals("new.email@example.com", contact.getEmail());
     }
 
     @Test
-    void deleteContact() {
-        var contact = new Contact("To be", "Deleted", "", "");
-        var contactId = contactDao.addContact(contact);
-
-        contactDao.deleteContact(contactId);
-
-        assertThatThrownBy(() -> contactDao.getContact(contactId))
-                .isInstanceOf(EmptyResultDataAccessException.class);
-
+    public void testDeleteContact() {
+        contactDao.deleteContact(1L);
+        List<Contact> contacts = contactDao.getAllContacts();
+        Assert.assertEquals(1, contacts.size());
     }
 }

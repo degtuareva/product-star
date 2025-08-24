@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.product.star.homework.ContactDaoTests" tests="1" skipped="0" failures="0" errors="0" timestamp="2025-08-24T14:29:32" hostname="OLYA" time="0.469">
+  <properties/>
+  <testcase name="testAddContact" classname="com.product.star.homework.ContactDaoTests" time="0.469"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[авг. 24, 2025 5:29:32 PM org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseFactory initDatabase
+INFO: Starting embedded database: url='jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=false', username='sa'
+авг. 24, 2025 5:29:32 PM org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseFactory shutdownDatabase
+INFO: Shutting down embedded database: url='jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=false'
+]]></system-err>
+</testsuite>
